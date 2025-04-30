@@ -23,7 +23,7 @@
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/yourusername/postergen.git
+   git clone https://github.com/bitpaint/Gource-Tools-postergenerator.git
    cd postergen
    ```
 
