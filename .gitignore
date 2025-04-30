@@ -1,0 +1,13 @@
+# Ignore the output directory
+Export/
+
+# Ignore the cloned repositories
+repos/
+
+# Ignore log files
+combined_log.txt
+sorted_combined_log.txt
+
+# Ignore temporary files
+*.tmp
+*.log
