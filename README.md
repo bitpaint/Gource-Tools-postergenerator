@@ -5,6 +5,11 @@
      │               POSTER GENERATOR                 │
      └────────────────────────────────────────────────┘
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue)](https://github.com/PowerShell/PowerShell)
+[![Gource](https://img.shields.io/badge/Uses-Gource-green)](https://gource.io/)
+[![FFmpeg](https://img.shields.io/badge/Requires-FFmpeg-orange)](https://ffmpeg.org/)
+
 ## Features
 
 - Clone a single repository or all repositories from a GitHub user/organization (excluding forks).
@@ -16,15 +21,15 @@
 
 - PowerShell
 - Git
-- Gource
-- FFmpeg
+- [Gource](https://gource.io/)
+- [FFmpeg](https://ffmpeg.org/)
 
 ## Usage
 
 1. Clone this repository:
    ```bash
    git clone https://github.com/bitpaint/Gource-Tools-postergenerator.git
-   cd postergen
+   cd Gource-Tools-postergenerator
    ```
 
 2. Run the script:
@@ -42,8 +47,18 @@
 
 ## Directory Structure
 
-The tool will create a `repos` directory to store cloned repositories and an `Export` directory to save generated posters.
+The tool will create two main directories:
+- `repos/` - Stores cloned repositories
+- `posters/` - Saves generated posters, organized by repository name
+
+## Screenshots
+
+(Screenshots coming soon)
 
 ## License
 
 This project is licensed under the MIT License. See the LICENSE file for details.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
