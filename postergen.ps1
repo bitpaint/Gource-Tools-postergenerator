@@ -2,7 +2,7 @@
 function Show-Header {
     Clear-Host
     Write-Host ""
-    Write-Host "        ┌─┐┌─┐┬ ┬┬─┐┌─┐┌─┐   ┌┬┐┌─┐┌─┐┬  ┌─┐" -ForegroundColor White
+    Write-Host "        ┌─┐┌─┐┬ ┬┬─┐┌─┐┌─┐  ┌┬┐┌─┐┌─┐┬  ┌─┐" -ForegroundColor White
     Write-Host "        │ ┬│ ││ │├┬┘│  ├┤ ───│ │ ││ ││  └─┐" -ForegroundColor White
     Write-Host "        └─┘└─┘└─┘┴└─└─┘└─┘   ┴ └─┘└─┘┴─┘└─┘" -ForegroundColor White
     Write-Host "     ┌────────────────────────────────────────────────┐" -ForegroundColor White
@@ -41,7 +41,16 @@ function New-Repo {
     
     Write-Host "   [*] Processing repository: $repoName" -ForegroundColor White
     
-    # Check if the directory already exists
+    # Create Repos directory if it doesn't exist
+    if (-not (Test-Path "Repos")) {
+        New-Item -ItemType Directory -Path "Repos" | Out-Null
+        Write-Host "   [+] Created Repos directory" -ForegroundColor White
+    }
+    
+    # Change to the Repos directory
+    Set-Location "Repos"
+    
+    # Check if the repository directory already exists
     if (Test-Path $repoName) {
         Write-Host "   [!] Directory '$repoName' already exists. Pulling the latest changes..." -ForegroundColor White
         Set-Location $repoName
@@ -61,6 +70,15 @@ function New-Repo {
 function Use-ExistingRepo {
     Write-Host "   [?] Enter the path to the existing repository" -ForegroundColor White
     $repoPath = Read-Host "   > "
+    
+    # Check if the path is absolute
+    if (-not [System.IO.Path]::IsPathRooted($repoPath)) {
+        # If not absolute, check if it's in the Repos directory
+        if (Test-Path "Repos/$repoPath") {
+            $repoPath = "Repos/$repoPath"
+        }
+    }
+    
     if (-Not (Test-Path $repoPath)) {
         Write-Host "   [!] Directory does not exist. Please check the path." -ForegroundColor White
         exit
@@ -78,6 +96,15 @@ function Get-GitHubRepos {
     $typeChoice = Read-Host "   > "
     
     $type = if ($typeChoice -eq "2") { "orgs" } else { "users" }
+    
+    # Create Repos directory if it doesn't exist
+    if (-not (Test-Path "Repos")) {
+        New-Item -ItemType Directory -Path "Repos" | Out-Null
+        Write-Host "   [+] Created Repos directory" -ForegroundColor White
+    }
+    
+    # Change to the Repos directory
+    Set-Location "Repos"
     
     $tempDir = "github_$githubUser"
     
@@ -227,15 +254,16 @@ function Get-FontSize {
     $width = [int]($viewport -replace 'x.*$', '')
     
     # Scale font size proportionally to viewport width
+    # Reduced by approximately 15% from original values
     switch ($width) {
-        { $_ -le 320 } { return 24 }  # 240p
-        { $_ -le 640 } { return 36 }  # 360p
-        { $_ -le 1280 } { return 48 } # 720p
-        { $_ -le 1920 } { return 64 } # 1080p
-        { $_ -le 2560 } { return 86 } # 1440p
-        { $_ -le 3840 } { return 128 } # 4K
-        { $_ -le 7680 } { return 192 } # 8K
-        default { return 256 }          # 16K and above
+        { $_ -le 320 } { return 20 }  # 240p (was 24)
+        { $_ -le 640 } { return 30 }  # 360p (was 36)
+        { $_ -le 1280 } { return 40 } # 720p (was 48)
+        { $_ -le 1920 } { return 54 } # 1080p (was 64)
+        { $_ -le 2560 } { return 73 } # 1440p (was 86)
+        { $_ -le 3840 } { return 108 } # 4K (was 128)
+        { $_ -le 7680 } { return 162 } # 8K (was 192)
+        default { return 218 }          # 16K and above (was 256)
     }
 }
 
@@ -268,8 +296,13 @@ if ($orientation -eq "portrait") {
 $fontSize = Get-FontSize -viewport $viewport
 
 # Create export directory
-$exportPath = Join-Path -Path (Split-Path -Path (Get-Location) -Parent) -ChildPath "Export/$repoName"
+$currentDir = Get-Location
+$exportPath = Join-Path -Path (Split-Path -Path $currentDir -Parent) -ChildPath "Exports"
 New-Item -ItemType Directory -Force -Path $exportPath | Out-Null
+
+# Create repository-specific directory for the output files
+$repoExportPath = Join-Path -Path $exportPath -ChildPath $repoName
+New-Item -ItemType Directory -Force -Path $repoExportPath | Out-Null
 
 # Logic for different modes
 if ($choice -eq "3") {
@@ -299,7 +332,7 @@ if ($choice -eq "3") {
     for ($year = $firstYear; $year -le $lastYear; $year++) {
         Write-Host "   [*] Generating poster for $year..." -ForegroundColor White
         $stopDate = Get-Date -Date "$year-12-31" -UFormat %s
-        $outputFile = "$exportPath/$year.png"
+        $outputFile = "$repoExportPath/$year.png"
         
         # Check if there are entries in this year
         $entriesInYear = Get-Content $sortedLogFile | Where-Object { 
@@ -346,7 +379,7 @@ if ($choice -eq "3") {
     for ($year = $firstYear; $year -le $lastYear; $year++) {
         Write-Host "   [*] Generating poster for $year..." -ForegroundColor White
         $stopDate = Get-Date -Date "$year-12-31" -UFormat %s
-        $outputFile = "$exportPath/$year.png"
+        $outputFile = "$repoExportPath/$year.png"
         
         # Check if there are commits in this year
         $commitCount = git rev-list --count --until="$stopDate" HEAD
@@ -357,7 +390,7 @@ if ($choice -eq "3") {
         
         # Run Gource with pipe output to capture the last frame
         Write-Host "   [+] Running Gource visualization..." -ForegroundColor White
-        gource -s 0.00001 --viewport $viewport --stop-date $stopDate --stop-at-end --hide root,users,filenames,progress,mouse --highlight-dirs --dir-name-depth 3 --dir-name-position 1 --date-format "%Y" --font-size $fontSize --font-file "C:\Windows\Fonts\arialbd.ttf" --output-ppm-stream - | ffmpeg -y -f image2pipe -vcodec ppm -i - -update 1 $outputFile
+        gource -s 0.00001 --viewport $viewport --stop-date "$year-12-31" --stop-at-end --hide root,users,filenames,progress,mouse --highlight-dirs --dir-name-depth 3 --dir-name-position 1 --date-format "%Y" --font-size $fontSize --font-file "C:\Windows\Fonts\arialbd.ttf" --output-ppm-stream - | ffmpeg -y -f image2pipe -vcodec ppm -i - -update 1 $outputFile
         
         if ($LASTEXITCODE -eq 0) {
             Write-Host "   [✓] Successfully generated $outputFile" -ForegroundColor White
@@ -372,5 +405,5 @@ Write-Host "   ┌────────────────────�
 Write-Host "   │                        COMPLETED                           │" -ForegroundColor White
 Write-Host "   ├────────────────────────────────────────────────────────────┤" -ForegroundColor White
 Write-Host "   │  Generated posters for years $firstYear to $lastYear                │" -ForegroundColor White
-Write-Host "   │  Output directory: $exportPath │" -ForegroundColor White
+Write-Host "   │  Output directory: $repoExportPath │" -ForegroundColor White
 Write-Host "   └────────────────────────────────────────────────────────────┘" -ForegroundColor White

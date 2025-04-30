@@ -1,7 +1,11 @@
-# Poster Generator for Git Repositories
 
-</code_block_to_apply_changes_from>
-
+        ┌─┐┌─┐┬ ┬┬─┐┌─┐┌─┐  ┌┬┐┌─┐┌─┐┬  ┌─┐
+        │ ┬│ ││ │├┬┘│  ├┤ ───│ │ ││ ││  └─┐
+        └─┘└─┘└─┘┴└─└─┘└─┘   ┴ └─┘└─┘┴─┘└─┘
+     ┌────────────────────────────────────────────────┐
+     │               POSTER GENERATOR                 │
+     └────────────────────────────────────────────────┘
+     
 ## Features
 
 - Clone a single repository or all repositories from a GitHub user/organization (excluding forks).
