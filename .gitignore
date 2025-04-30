@@ -1,8 +1,8 @@
-# Ignore the output directory
-Export/
-
-# Ignore the cloned repositories
+# Ignore the repositories directory
 repos/
+
+# Ignore the posters output directory
+posters/
 
 # Ignore log files
 combined_log.txt

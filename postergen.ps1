@@ -1,3 +1,9 @@
+# Set up script root directory for consistent path handling
+$scriptRoot = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent -Path $MyInvocation.MyCommand.Path }
+if (!$scriptRoot) {
+    $scriptRoot = Get-Location
+}
+
 # Function to show stylish ASCII header
 function Show-Header {
     Clear-Host
@@ -42,13 +48,14 @@ function New-Repo {
     Write-Host "   [*] Processing repository: $repoName" -ForegroundColor White
     
     # Create Repos directory if it doesn't exist
-    if (-not (Test-Path "Repos")) {
-        New-Item -ItemType Directory -Path "Repos" | Out-Null
-        Write-Host "   [+] Created Repos directory" -ForegroundColor White
+    $reposDir = Join-Path -Path $scriptRoot -ChildPath "repos"
+    if (-not (Test-Path $reposDir)) {
+        New-Item -ItemType Directory -Path $reposDir | Out-Null
+        Write-Host "   [+] Created repos directory" -ForegroundColor White
     }
     
     # Change to the Repos directory
-    Set-Location "Repos"
+    Set-Location $reposDir
     
     # Check if the repository directory already exists
     if (Test-Path $repoName) {
@@ -71,11 +78,14 @@ function Use-ExistingRepo {
     Write-Host "   [?] Enter the path to the existing repository" -ForegroundColor White
     $repoPath = Read-Host "   > "
     
+    # Make the repos directory path
+    $reposDir = Join-Path -Path $scriptRoot -ChildPath "repos"
+    
     # Check if the path is absolute
     if (-not [System.IO.Path]::IsPathRooted($repoPath)) {
-        # If not absolute, check if it's in the Repos directory
-        if (Test-Path "Repos/$repoPath") {
-            $repoPath = "Repos/$repoPath"
+        # If not absolute, check if it's in the repos directory
+        if (Test-Path (Join-Path -Path $reposDir -ChildPath $repoPath)) {
+            $repoPath = Join-Path -Path $reposDir -ChildPath $repoPath
         }
     }
     
@@ -98,13 +108,14 @@ function Get-GitHubRepos {
     $type = if ($typeChoice -eq "2") { "orgs" } else { "users" }
     
     # Create Repos directory if it doesn't exist
-    if (-not (Test-Path "Repos")) {
-        New-Item -ItemType Directory -Path "Repos" | Out-Null
-        Write-Host "   [+] Created Repos directory" -ForegroundColor White
+    $reposDir = Join-Path -Path $scriptRoot -ChildPath "repos"
+    if (-not (Test-Path $reposDir)) {
+        New-Item -ItemType Directory -Path $reposDir | Out-Null
+        Write-Host "   [+] Created repos directory" -ForegroundColor White
     }
     
     # Change to the Repos directory
-    Set-Location "Repos"
+    Set-Location $reposDir
     
     $tempDir = "github_$githubUser"
     
@@ -274,7 +285,11 @@ $choice = Show-Menu
 $repoName = switch ($choice) {
     1 { New-Repo }
     2 { Use-ExistingRepo }
-    3 { Get-GitHubRepos }
+    3 { 
+        $githubUsername = Get-GitHubRepos
+        # Return the GitHub username as a string
+        "$githubUsername"
+    }
     default {
         Write-Host "   [!] Invalid choice. Exiting." -ForegroundColor White
         exit
@@ -295,20 +310,24 @@ if ($orientation -eq "portrait") {
 # Determine font size based on resolution
 $fontSize = Get-FontSize -viewport $viewport
 
-# Create export directory
-$currentDir = Get-Location
-$exportPath = Join-Path -Path (Split-Path -Path $currentDir -Parent) -ChildPath "Exports"
-New-Item -ItemType Directory -Force -Path $exportPath | Out-Null
+# Create posters directory if it doesn't exist
+$postersDir = Join-Path -Path $scriptRoot -ChildPath "posters"
+if (-not (Test-Path $postersDir)) {
+    New-Item -ItemType Directory -Force -Path $postersDir | Out-Null
+    Write-Host "   [+] Created posters directory" -ForegroundColor White
+}
 
 # Create repository-specific directory for the output files
-$repoExportPath = Join-Path -Path $exportPath -ChildPath $repoName
+# Convert $repoName to string to handle cases where it might be an array
+$repoNameStr = if ($repoName -is [array]) { $repoName[0] } else { "$repoName" }
+$repoExportPath = Join-Path -Path $postersDir -ChildPath $repoNameStr
 New-Item -ItemType Directory -Force -Path $repoExportPath | Out-Null
 
 # Logic for different modes
 if ($choice -eq "3") {
     # For GitHub user/org repositories, use the combined log
     Write-Host ""
-    Write-Host "   [*] Preparing to generate visualizations for $repoName's repositories..." -ForegroundColor White
+    Write-Host "   [*] Preparing to generate visualizations for $repoNameStr's repositories..." -ForegroundColor White
     
     # Get years from the combined log
     $sortedLogFile = "sorted_combined_log.txt"
@@ -332,7 +351,7 @@ if ($choice -eq "3") {
     for ($year = $firstYear; $year -le $lastYear; $year++) {
         Write-Host "   [*] Generating poster for $year..." -ForegroundColor White
         $stopDate = Get-Date -Date "$year-12-31" -UFormat %s
-        $outputFile = "$repoExportPath/$year.png"
+        $outputFile = Join-Path -Path $repoExportPath -ChildPath "$year.png"
         
         # Check if there are entries in this year
         $entriesInYear = Get-Content $sortedLogFile | Where-Object { 
@@ -358,7 +377,7 @@ if ($choice -eq "3") {
 } else {
     # For single repository
     Write-Host ""
-    Write-Host "   [*] Preparing to generate visualizations for repository: $repoName" -ForegroundColor White
+    Write-Host "   [*] Preparing to generate visualizations for repository: $repoNameStr" -ForegroundColor White
     
     # Get the first and last commit dates
     $firstCommitDate = git log --reverse --format=%ci | Select-Object -First 1
@@ -379,7 +398,7 @@ if ($choice -eq "3") {
     for ($year = $firstYear; $year -le $lastYear; $year++) {
         Write-Host "   [*] Generating poster for $year..." -ForegroundColor White
         $stopDate = Get-Date -Date "$year-12-31" -UFormat %s
-        $outputFile = "$repoExportPath/$year.png"
+        $outputFile = Join-Path -Path $repoExportPath -ChildPath "$year.png"
         
         # Check if there are commits in this year
         $commitCount = git rev-list --count --until="$stopDate" HEAD
@@ -405,5 +424,6 @@ Write-Host "   ┌────────────────────�
 Write-Host "   │                        COMPLETED                           │" -ForegroundColor White
 Write-Host "   ├────────────────────────────────────────────────────────────┤" -ForegroundColor White
 Write-Host "   │  Generated posters for years $firstYear to $lastYear                │" -ForegroundColor White
+Write-Host "   │  Repository: $(Join-Path -Path $scriptRoot -ChildPath "repos")     │" -ForegroundColor White
 Write-Host "   │  Output directory: $repoExportPath │" -ForegroundColor White
 Write-Host "   └────────────────────────────────────────────────────────────┘" -ForegroundColor White
