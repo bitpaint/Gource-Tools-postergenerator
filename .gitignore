@@ -11,3 +11,4 @@ sorted_combined_log.txt
 # Ignore temporary files
 *.tmp
 *.log
+temp_year_data.txt
